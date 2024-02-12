@@ -67,7 +67,7 @@ export class Plugin extends AbstractPlugin {
             new BotCommand(Plugin.STATS_CMD, "shows the statistics of the plugin", this.STATS.bind(this), true),
             new BotCommand(Plugin.CURRENT_CMD, "shows the current winnings and punishments", this.CURRENT.bind(this), true),
 
-            new BotCommand(['give'], '', this._give.bind(this), false),
+            //new BotCommand(['give'], '', this._give.bind(this), false),
         ];
     }
 
