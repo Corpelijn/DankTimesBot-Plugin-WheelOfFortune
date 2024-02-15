@@ -97,8 +97,8 @@ export class ChatManager {
         const intervalMinutes = Number(this.chat.getSetting(Plugin.SETTING_INTERVAL_BETWEEN_SPINS));
         const nextSpin = new Date(this.lastSpin.getTime() + (intervalMinutes * 60 * 1000));
         if (nextSpin > new Date()) {
-            const leftoverTime = (new Date().getTime() - nextSpin.getTime()) / 1000 / 60;
-            const leftoverTimeString = leftoverTime < 1 ? "in one minute" : `over ${leftoverTime} minutes`;
+            const leftoverTime = Math.ceil(Math.abs(new Date().getTime() - nextSpin.getTime()) / 1000 / 60);
+            const leftoverTimeString = leftoverTime <= 1 ? "in one minute" : `over ${leftoverTime} minutes`;
             return `The Wheel of Fortune is unavailable right now. Try again ${leftoverTimeString}.`;
         }
 
@@ -121,15 +121,16 @@ export class ChatManager {
             this.sendMessage(winDescription);
         }, 11000);
 
+        this.lastSpin = new Date();
+
         return 'You give the wheel a mighty spin';
     }
 
     /**
      * Generates a new wheel for the current chat.
      */
-    public generateWheel() {
-        const users = Array.from(this.chat.users.values()).filter(u => u.id !== undefined);
-        console.log(users);
+    public clearAndGenerateWheel() {
+        const users = Array.from(this.chat.users.values()).filter(u => u.id !== undefined && u.score > 0);
         const userScoreAverage = users.map(user => user.score).reduce<number>((score, total) => total + score, 0) / users.length;
         const userScoreMedian = users.map(user => user.score)[Math.floor(users.length / 2)];
         this.allActions = [];
@@ -234,8 +235,6 @@ export class ChatManager {
 
         this.statistics.spinMade();
 
-        this.lastSpin = new Date();
-
         return this.getSpinDescription(action, user);
     }
 
@@ -280,7 +279,7 @@ export class ChatManager {
     }
 
     private calculateWheelFitness(actions: WheelAction[]): number {
-        return actions.map(a => a.priceQuality).reduce((v, total) => total + v, 0) /*/ actions.length*/;
+        return actions.map(a => a.priceQuality).reduce((v, total) => total + v, 0) / actions.length;
     }
 
     private getNewWheelAction(): WheelAction {

@@ -22,7 +22,7 @@ export class Equalizer extends WheelAction {
             manager.sendMessage(`You already have these points.\nYou win NOTHING.`);
         } else if (this.user.score < user.score) {
             manager.sendMessage(`You already have more points than ${this.user.name}.\nYou win NOTHING`);
-        } else /* if (this.player.score > user.score) */ {
+        } else {
 
             // Calculate the amount the user is going to win
             const winnings = Math.max(0, this.user.score - user.score - 1);

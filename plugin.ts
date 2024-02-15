@@ -35,14 +35,15 @@ export class Plugin extends AbstractPlugin {
     private _util = new Util();
 
     constructor() {
-        super("Wheel of Fortune Plugin", "1.0.0")
+        super("Wheel of Fortune Plugin", "1.0.1")
 
-        this.subscribeToPluginEvent(PluginEvent.ChatReset, this.RESET.bind(this));
-        this.subscribeToPluginEvent(PluginEvent.HourlyTick, this.CLEAR_PUNISHMENTS.bind(this));
-        this.subscribeToPluginEvent(PluginEvent.ChatMessage, this.messageReceived.bind(this));
-        this.subscribeToPluginEvent(PluginEvent.PreUserScoreChange, this.SCORE_UPDATE.bind(this));
+        this.subscribeToPluginEvent(PluginEvent.ChatReset, this.onChatReset.bind(this));
+        this.subscribeToPluginEvent(PluginEvent.HourlyTick, this.onHourlyTick.bind(this));
+        this.subscribeToPluginEvent(PluginEvent.ChatMessage, this.onChatMessageReceived.bind(this));
+        this.subscribeToPluginEvent(PluginEvent.PreUserScoreChange, this.onPreUserScoreChange.bind(this));
         this.subscribeToPluginEvent(PluginEvent.BotShutdown, this.onShutdown.bind(this));
         this.subscribeToPluginEvent(PluginEvent.BotStartup, this.onStartup.bind(this));
+        this.subscribeToPluginEvent(PluginEvent.NightlyUpdate, this.onNightlyUpdate.bind(this));
     }
 
     /**
@@ -61,11 +62,11 @@ export class Plugin extends AbstractPlugin {
      */
     public getPluginSpecificCommands(): BotCommand[] {
         return [
-            new BotCommand(Plugin.SPIN_CMD, "spins the Wheel of Fortune", this.SPIN.bind(this), true),
-            new BotCommand(Plugin.EXPLAIN_CMD, "explains the items of the Wheel of Fortune", this.EXPLAIN.bind(this), true),
-            new BotCommand(Plugin.INFO_CMD, "prints information about the Wheel of Fortune", this.HELP.bind(this), true),
-            new BotCommand(Plugin.STATS_CMD, "shows the statistics of the plugin", this.STATS.bind(this), true),
-            new BotCommand(Plugin.CURRENT_CMD, "shows the current winnings and punishments", this.CURRENT.bind(this), true),
+            new BotCommand(Plugin.SPIN_CMD, "spins the Wheel of Fortune", this.spin.bind(this), true),
+            new BotCommand(Plugin.EXPLAIN_CMD, "explains the items of the Wheel of Fortune", this.explain.bind(this), true),
+            new BotCommand(Plugin.INFO_CMD, "prints information about the Wheel of Fortune", this.info.bind(this), true),
+            new BotCommand(Plugin.STATS_CMD, "shows the statistics of the plugin", this.stats.bind(this), true),
+            new BotCommand(Plugin.CURRENT_CMD, "shows the current winnings and punishments", this.currentWinningsAndPunishments.bind(this), true),
 
             //new BotCommand(['give'], '', this._give.bind(this), false),
         ];
@@ -85,7 +86,7 @@ export class Plugin extends AbstractPlugin {
         await this.telegramBotClient.deleteMessage(chatId, messageId.toString());
     }
 
-    private HELP(): any {
+    private info(): any {
         return `Welcome to The Wheel of Fortune\n\n` +
 
             `/${Plugin.SPIN_CMD[0]} to spin the wheel\n` +
@@ -94,35 +95,35 @@ export class Plugin extends AbstractPlugin {
             `/${Plugin.CURRENT_CMD[0]} to show your winnings and punishments`;
     }
 
-    private SPIN(chat: Chat, user: User): string | BotCommandConfirmationQuestion {
+    private spin(chat: Chat, user: User): string | BotCommandConfirmationQuestion {
         return this.getChatManager(chat)!.spin(user);
     }
 
-    private EXPLAIN(chat: Chat): any {
+    private explain(chat: Chat): any {
         return this.getChatManager(chat)!.explainWheel();
     }
 
-    private STATS(chat: Chat): any {
+    private stats(chat: Chat): any {
         return this._statistics.getChat(chat.id)?.print();
     }
 
-    private CURRENT(chat: Chat, user: User): any {
+    private currentWinningsAndPunishments(chat: Chat, user: User): any {
         return this.getChatManager(chat)!.printUserAwards(user);
     }
 
-    private RESET(args: ChatResetEventArguments): any {
+    private onChatReset(args: ChatResetEventArguments): any {
         const statistics = this._statistics.getChat(args.chat.id);
         this.sendTextMessage(args.chat.id, `Statistics before the reset:\n${statistics.print()}`);
         statistics.reset();
     }
 
-    private CLEAR_PUNISHMENTS(args: EmptyEventArguments): any {
+    private onHourlyTick(args: EmptyEventArguments): any {
         for (const chat of this._chats.values()) {
             chat.clearOldWheelActions();
         }
     }
 
-    public SCORE_UPDATE(args: PreUserScoreChangedEventArguments): any {
+    public onPreUserScoreChange(args: PreUserScoreChangedEventArguments): any {
         this.getChatManager(args.chat)!.handleScoreChange(args);
     }
 
@@ -137,7 +138,13 @@ export class Plugin extends AbstractPlugin {
         }
     }
 
-    private messageReceived(args: ChatMessageEventArguments) {
+    private onNightlyUpdate() {
+        for(const chat of this._chats.values()) {
+            chat.clearAndGenerateWheel();
+        }
+    }
+
+    private onChatMessageReceived(args: ChatMessageEventArguments) {
         const chat = this.getChatManager(args.chat)!;
         chat.handleChatMessage(args);
     }
@@ -148,7 +155,7 @@ export class Plugin extends AbstractPlugin {
         } else {
             const statistics = this._statistics.getChat(chat.id);
             const chatManager = new ChatManager(chat, this, statistics);
-            chatManager.generateWheel();
+            chatManager.clearAndGenerateWheel();
             this._chats.set(chat.id, chatManager);
             return chatManager;
         }
