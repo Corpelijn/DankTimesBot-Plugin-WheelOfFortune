@@ -1,5 +1,7 @@
 
 export class Util {
+    public static readonly MINUTES_TO_MILLISECONDS = 1000 * 60;
+    
     public static shuffle<T>(array: T[]): T[] {
         let currentIndex = array.length,  randomIndex;
     
@@ -17,4 +19,8 @@ export class Util {
       
         return array;
     };
+
+    public static inRange(value: number, target: number, delta: number) : boolean {
+        return value < target + delta && value > target - delta;
+    }
 }

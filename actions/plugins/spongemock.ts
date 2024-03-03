@@ -2,6 +2,7 @@ import { Chat } from "../../../../src/chat/chat";
 import { User } from "../../../../src/chat/user/user";
 import { ChatMessageEventArguments } from "../../../../src/plugin-host/plugin-events/event-arguments/chat-message-event-arguments";
 import { ChatManager } from "../../chat-manager";
+import { Util } from "../../util";
 import { WheelAction } from "../../wheel-action";
 
 
@@ -62,12 +63,14 @@ export class SpongeMockCosts extends WheelAction {
 
 export class SpongeMockBonus extends WheelAction {
 
+    private lastPostedMessage = new Date();
+
     constructor(private bonus: number) {
         super();
     }
 
     public name: string = `${SpongeMock.PLUGIN_NAME} bonus ${this.bonus}`;
-    public description: string = `Using the ${SpongeMock.PLUGIN_NAME} plugin will give you ${this.bonus} points.`;
+    public description: string = `Using the ${SpongeMock.PLUGIN_NAME} plugin will give you ${this.bonus} points every ${this.bonus} minutes.`;
     public category: string = 'spongemock';
     public priceQuality: number = 1;
 
@@ -82,11 +85,18 @@ export class SpongeMockBonus extends WheelAction {
     private onPostMessage(manager: ChatManager, user: User, args: ChatMessageEventArguments) {
         // If the text message contains any of the commands from the plugin, reward the user with the points
         if (SpongeMock.PLUGIN_COMMANDS.some(c => args.msg.text?.trim().startsWith(`/${c}`))) {
-            // Reward the points to the user
-            manager.rewardPoints(this.bonus, user);
+            // Check if the timeout between messages has passed
+            if (this.lastPostedMessage.getTime() + this.bonus * Util.MINUTES_TO_MILLISECONDS < new Date().getTime()) {
+                // Reward the points to the user
+                manager.rewardPoints(this.bonus, user);
 
-            // Remove the points from the balance
-            manager.getStatistics().alterBalance(-this.bonus);
+                // Remove the points from the balance
+                manager.getStatistics().alterBalance(-this.bonus);
+            }
+
+            // Update the last posted message time everytime a spongemock command is used.
+            // This discourages spamming as the timer will reset every time.
+            this.lastPostedMessage = new Date();
         }
     }
 }

@@ -211,7 +211,8 @@ export class ChatManager {
         const actions = this.userClaimedActions.filter(a => a.winner?.id === user.id);
         let message = `Current winnings and punishments for ${user.name}:\n`;
         for (const action of actions) {
-            message += `- ${action.name} -- ${action.getLeftoverTime()} left\n`;
+            message += `- <b>${action.name}</b> -- <i>${action.getLeftoverTime()} left</i>\n`;
+            message += `${action.description}\n\n`;
         }
 
         if (actions.length === 0) {
@@ -240,17 +241,17 @@ export class ChatManager {
 
     private updateWheel(wheel: WheelAction[]): void {
         const index = wheel.length;
-        const destinationLength = Number(this.chat.getSetting(Plugin.SETTING_ITEMS_ON_WHEEL));
-        const destinationFitness = -1;
+        const targetLength = Number(this.chat.getSetting(Plugin.SETTING_ITEMS_ON_WHEEL));
+        const targetFitness = 0;
 
         let currentWheelFitness = this.calculateWheelFitness(wheel);
-        while (wheel.length < destinationLength || (currentWheelFitness < destinationFitness - 0.1 || currentWheelFitness > destinationFitness + 0.1)) {
+        while (wheel.length < targetLength || Util.inRange(currentWheelFitness, targetFitness, 0.5)) {
             const newAction = this.getNewWheelAction();
             if (!wheel.map(a => a.category).includes(newAction.category) && this.statistics.getBalance() >= newAction.pointRequirement) {
                 wheel.push(newAction);
             }
 
-            if (wheel.length > destinationLength) {
+            if (wheel.length > targetLength) {
                 wheel.splice(index, 1);
             }
 

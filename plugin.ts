@@ -35,7 +35,7 @@ export class Plugin extends AbstractPlugin {
     private _util = new Util();
 
     constructor() {
-        super("Wheel of Fortune Plugin", "1.0.1")
+        super("Wheel of Fortune Plugin", "1.0.2")
 
         this.subscribeToPluginEvent(PluginEvent.ChatReset, this.onChatReset.bind(this));
         this.subscribeToPluginEvent(PluginEvent.HourlyTick, this.onHourlyTick.bind(this));

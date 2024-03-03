@@ -21,10 +21,10 @@ export class ExtraCosts extends WheelAction {
         return -this.extraCost * 10;
     }
 
-    public static getExtraCosts() : WheelAction[] {
+    public static getExtraCosts(): WheelAction[] {
         const actions = new Array<WheelAction>();
         const numbers = [5, 10, 15];
-        for(const number of numbers) {
+        for (const number of numbers) {
             actions.push(new ExtraCosts(number));
         }
 
@@ -32,9 +32,11 @@ export class ExtraCosts extends WheelAction {
     }
 
     private onScoreChange(manager: ChatManager, args: PreUserScoreChangedEventArguments) {
-        // Subtract the costs from the awarded or losing points
-        args.changeInScore -= this.extraCost;
-        // Add the taken points to the balance
-        manager.getStatistics().alterBalance(this.extraCost);
+        if (!args.immutable) {
+            // Subtract the costs from the awarded or losing points
+            args.changeInScore -= this.extraCost;
+            // Add the taken points to the balance
+            manager.getStatistics().alterBalance(this.extraCost);
+        }
     }
 }
