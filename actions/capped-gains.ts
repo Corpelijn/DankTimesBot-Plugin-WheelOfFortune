@@ -11,15 +11,15 @@ export class CappedGains extends WheelAction {
 
     public name: string = `Capped to ${this.number}`;
     public description: string = `Everytime you win/gain points greater than ${this.number} points, you only receive ${this.number} points.`;
-    public category: string = `capped${this.number}`;
-    public priceQuality: number = -1;
+    public category: string = `capped`;
+    public priceQuality: number = -1 - (this.number * 0.5);
 
     public handleWinnings(manager: ChatManager, user: User): void {
-        manager.subscribeScoreChange(user, args => this.onScoreChange(manager, args));
+        manager.subscribeScoreChange(this, args => this.onScoreChange(manager, args));
     }
 
     public getEstimatedPrice(): number {
-        return this.number * 50;
+        return -this.number * 50;
     }
 
     public static getCappedGains(): WheelAction[] {
@@ -34,7 +34,7 @@ export class CappedGains extends WheelAction {
 
     private onScoreChange(manager: ChatManager, args: PreUserScoreChangedEventArguments) {
         // Check if the user is winning points or losing points, and if the user is winning more than the capped amount
-        if(args.changeInScore > this.number) {
+        if(args.changeInScore > this.number && !this.isExpired && !args.immutable) {
             // Calculate the "leftover" points that we can add to the balance
             const leftover = args.changeInScore - this.number;
 
@@ -43,6 +43,6 @@ export class CappedGains extends WheelAction {
 
             // Add the leftover points to the balance
             manager.getStatistics().alterBalance(leftover);
-        }        
+        }
     }
 }

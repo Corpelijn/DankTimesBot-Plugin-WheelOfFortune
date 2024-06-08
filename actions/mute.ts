@@ -15,10 +15,10 @@ export class Mute extends WheelAction {
     public name: string = `Mute to ${this.messages} per ${this.minutes}`;
     public description: string = `Limits you to only send ${this.messages} message(s) per ${this.minutes} minute(s)`;
     public category: string = 'mute';
-    public priceQuality: number = -2;
+    public priceQuality: number = -3;
 
     protected handleWinnings(manager: ChatManager, user: User): void {
-        manager.subscribeMessagePost(user, (args) => this.onChatMessage(manager, args));
+        manager.subscribeMessagePost(this, (args) => this.onChatMessage(manager, args));
     }
 
     public getEstimatedPrice(user: User): number {
@@ -26,20 +26,22 @@ export class Mute extends WheelAction {
     }
 
     public static getMutes(): WheelAction[] {
-        const messageCounts = [1, 2, 3];
+        const messagesPerMinute = 5;
         const minutes = [1, 2, 3];
 
         const actions: WheelAction[] = [];
-        for (const message of messageCounts) {
-            for (const minute of minutes) {
-                actions.push(new Mute(message, minute));
-            }
+        for (const minute of minutes) {
+            actions.push(new Mute(Math.max(10, minute * messagesPerMinute), minute));
         }
 
         return actions;
     }
 
     private onChatMessage(manager: ChatManager, args: ChatMessageEventArguments) {
+        if (this.isExpired) {
+            return;
+        }
+
         const messageTimestamp = args.msg.date;
         const lowestLastMessageTimestamp = Math.min(...this.lastMessageTimestamps);
 

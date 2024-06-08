@@ -11,20 +11,20 @@ export class PayForMessages extends WheelAction {
     }
 
     public name: string = `Pay for everything ${this.costs}`;
-    public description: string= `When you send a message in the chat, it will cost you ${this.costs} points.`;
-    public category: string=  `payformessages${this.costs}`;
-    public priceQuality: number = -1.5 - (this.costs * 0.1);
+    public description: string = `When you send a message in the chat, it will cost you ${this.costs} points.`;
+    public category: string = `payformessages`;
+    public priceQuality: number = -3 - (this.costs * 0.5);
 
     public handleWinnings(manager: ChatManager, user: User): void {
-        manager.subscribeMessagePost(user, () => this.onPostMessage(manager, user));
+        manager.subscribeMessagePost(this, () => this.onPostMessage(manager, user));
     }
 
     public getEstimatedPrice(user: User): number {
-        return -this.costs * 50;
+        return -this.costs * 200;
     }
 
     public static getPayForMessages(): WheelAction[] {
-        const numbers = [1, 2, 3, 4, 5];
+        const numbers = [1, 2];
         const actions: WheelAction[] = [];
         for (const number of numbers) {
             actions.push(new PayForMessages(number));
@@ -33,11 +33,13 @@ export class PayForMessages extends WheelAction {
         return actions;
     }
 
-    private onPostMessage(manager:ChatManager, user :User) {
-        // Take the points from the user
-        manager.reducePoints(this.costs, user);
+    private onPostMessage(manager: ChatManager, user: User) {
+        if (!this.isExpired) {
+            // Take the points from the user
+            manager.reducePoints(this.costs, user);
 
-        // Add the points back to the balance
-        manager.getStatistics().alterBalance(this.costs);
+            // Add the points back to the balance
+            manager.getStatistics().alterBalance(this.costs);
+        }
     }
 }

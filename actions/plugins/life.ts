@@ -15,7 +15,7 @@ export class Life {
         }
 
         const actions = new Array<WheelAction>();
-        const costNumbers = [5, 10, 15, 20, 25];
+        const costNumbers = [5, 10, 15];
         for (const number of costNumbers) {
             actions.push(new LifeCosts(number));
         }
@@ -36,7 +36,7 @@ export class LifeCosts extends WheelAction {
     public priceQuality: number = -1;
 
     public handleWinnings(manager: ChatManager, user: User): void {
-        manager.subscribeMessagePost(user, args => this.onPostMessage(manager, user, args));
+        manager.subscribeMessagePost(this, args => this.onPostMessage(manager, user, args));
     }
 
     public getEstimatedPrice(user: User): number {
@@ -45,7 +45,7 @@ export class LifeCosts extends WheelAction {
 
     private onPostMessage(manager: ChatManager, user: User, args: ChatMessageEventArguments) {
         // If the text message contains any of the commands from the plugin, reduce the points of the user
-        if (Life.PLUGIN_COMMANDS.some(c => args.msg.text?.trim().startsWith(`/${c}`))) {
+        if (Life.PLUGIN_COMMANDS.some(c => args.msg.text?.trim().startsWith(`/${c}`)) && !this.isExpired) {
             // Take the poins away from the user
             manager.reducePoints(this.costs, user);
 

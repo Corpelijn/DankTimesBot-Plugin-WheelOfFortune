@@ -1,30 +1,42 @@
 import { User } from "../../src/chat/user/user";
 import { ChatManager } from "./chat-manager";
 import { Plugin } from './plugin';
+import { Util } from "./util";
 
 export abstract class WheelAction {
 
-    private static readonly HOURS_TO_MILLISECONDS = 60 * 60 * 1000;
-    private static readonly MINUTES_TO_MILLISECONDS = 60 * 1000;
     private _expireTime: Date;
-
+    
     constructor() {
         this._expireTime = new Date();
+        const durations = [1, 2, 3, 4, 6, 8, 12, 16];
+        this.durationInHours = durations[Math.floor(Math.random() * durations.length)];
     }
-
+    
     public abstract name: string;
     public abstract description: string;
     public abstract category: string;
     public abstract priceQuality: number;
-
+    
     public winner: User | null;
-
+    public winTime: Date | null;
+    public durationInHours: number;
+    
     public get pointRequirement(): number { return 0; }
+    
+    public get title(): string {
+        return `<b>${this.name}</b> -- <i>${Util.getTimeDescription(this.durationInHours * Util.HOURS_TO_MILLISECONDS)}</i>`;
+    }
+
+    public get lightIcon(): string {
+        return this.priceQuality > 0 ? '🟢' : this.priceQuality === 0 ? '🔵' : '🔴';
+    }
 
     public awardWinnings(manager: ChatManager, user: User): void {
-        this.winner = user;
-        const durationInHours = Number(manager.chat.getSetting(Plugin.SETTING_AWARD_DURATION));
-        this._expireTime.setTime(new Date().getTime() + (durationInHours * 60 * 60 * 1000));
+        this.winner = user;        
+        this.winTime = new Date();
+
+        this._expireTime.setTime(new Date().getTime() + (this.durationInHours * Util.HOURS_TO_MILLISECONDS));
 
         this.handleWinnings(manager, user);
     }
@@ -41,14 +53,6 @@ export abstract class WheelAction {
     }
 
     public getLeftoverTime(): string {
-        const leftoverMs = this._expireTime.getTime() - new Date().getTime()
-        const hours = Math.floor(leftoverMs / WheelAction.HOURS_TO_MILLISECONDS);
-        const minutes = Math.ceil(leftoverMs / WheelAction.MINUTES_TO_MILLISECONDS);
-
-        if (hours > 0) {
-            return `${hours} hour(s)`;
-        } else {
-            return `${minutes} minute(s)`;
-        }
+        return Util.getTimeDifferenceDescription(this._expireTime);
     }
 }

@@ -34,6 +34,9 @@ export class SpongeMockCosts extends WheelAction {
 
     constructor(private costs: number) {
         super();
+
+        const durations = [8, 12, 16];
+        this.durationInHours = durations[Math.floor(Math.random() * durations.length)];
     }
 
     public name: string = `${SpongeMock.PLUGIN_NAME} costs ${this.costs}`;
@@ -42,7 +45,7 @@ export class SpongeMockCosts extends WheelAction {
     public priceQuality: number = -0.5;
 
     public handleWinnings(manager: ChatManager, user: User): undefined {
-        manager.subscribeMessagePost(user, args => this.onPostMessage(manager, user, args));
+        manager.subscribeMessagePost(this, args => this.onPostMessage(manager, user, args));
     }
 
     public getEstimatedPrice(): number {
@@ -51,7 +54,7 @@ export class SpongeMockCosts extends WheelAction {
 
     private onPostMessage(manager: ChatManager, user: User, args: ChatMessageEventArguments) {
         // If the text message contains any of the commands from the plugin, reduce the points of the user
-        if (SpongeMock.PLUGIN_COMMANDS.some(c => args.msg.text?.trim().startsWith(`/${c}`))) {
+        if (SpongeMock.PLUGIN_COMMANDS.some(c => args.msg.text?.trim().startsWith(`/${c}`)) && !this.isExpired) {
             // Take the points from the user
             manager.reducePoints(this.costs, user);
 
@@ -64,18 +67,24 @@ export class SpongeMockCosts extends WheelAction {
 export class SpongeMockBonus extends WheelAction {
 
     private lastPostedMessage = new Date();
+    private readonly bonus: number;
 
-    constructor(private bonus: number) {
+    constructor(private duration: number) {
         super();
+        this.bonus = 5 * this.duration;
     }
 
-    public name: string = `${SpongeMock.PLUGIN_NAME} bonus ${this.bonus}`;
-    public description: string = `Using the ${SpongeMock.PLUGIN_NAME} plugin will give you ${this.bonus} points every ${this.bonus} minutes.`;
+    public get name(): string {
+        return `${SpongeMock.PLUGIN_NAME} bonus ${this.bonus}`;
+    }
+    public get description(): string {
+        return `Using the ${SpongeMock.PLUGIN_NAME} plugin will give you ${this.bonus} points every ${this.duration} minutes.`;
+    }
     public category: string = 'spongemock';
     public priceQuality: number = 1;
 
     public handleWinnings(manager: ChatManager, user: User): void {
-        manager.subscribeMessagePost(user, args => this.onPostMessage(manager, user, args));
+        manager.subscribeMessagePost(this, args => this.onPostMessage(manager, user, args));
     }
 
     public getEstimatedPrice(): number {
@@ -86,7 +95,7 @@ export class SpongeMockBonus extends WheelAction {
         // If the text message contains any of the commands from the plugin, reward the user with the points
         if (SpongeMock.PLUGIN_COMMANDS.some(c => args.msg.text?.trim().startsWith(`/${c}`))) {
             // Check if the timeout between messages has passed
-            if (this.lastPostedMessage.getTime() + this.bonus * Util.MINUTES_TO_MILLISECONDS < new Date().getTime()) {
+            if (this.lastPostedMessage.getTime() + this.duration * Util.MINUTES_TO_MILLISECONDS < new Date().getTime() && !this.isExpired) {
                 // Reward the points to the user
                 manager.rewardPoints(this.bonus, user);
 

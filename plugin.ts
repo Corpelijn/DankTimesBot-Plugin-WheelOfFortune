@@ -13,6 +13,8 @@ import { PreUserScoreChangedEventArguments } from "../../src/plugin-host/plugin-
 import { EmptyEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/empty-event-arguments";
 import { ChatStatistics, Statistics } from "./statistics";
 import { ChatResetEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/chat-reset-event-arguments";
+import { PreDankTimeEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/pre-dank-time-event-arguments";
+import TelegramBot from "node-telegram-bot-api";
 
 export class Plugin extends AbstractPlugin {
     // Commands
@@ -35,7 +37,7 @@ export class Plugin extends AbstractPlugin {
     private _util = new Util();
 
     constructor() {
-        super("Wheel of Fortune Plugin", "1.0.2")
+        super("Wheel of Fortune Plugin", "1.0.3")
 
         this.subscribeToPluginEvent(PluginEvent.ChatReset, this.onChatReset.bind(this));
         this.subscribeToPluginEvent(PluginEvent.HourlyTick, this.onHourlyTick.bind(this));
@@ -44,6 +46,7 @@ export class Plugin extends AbstractPlugin {
         this.subscribeToPluginEvent(PluginEvent.BotShutdown, this.onShutdown.bind(this));
         this.subscribeToPluginEvent(PluginEvent.BotStartup, this.onStartup.bind(this));
         this.subscribeToPluginEvent(PluginEvent.NightlyUpdate, this.onNightlyUpdate.bind(this));
+        this.subscribeToPluginEvent(PluginEvent.PreDankTime, this.onDankTime.bind(this));
     }
 
     /**
@@ -53,7 +56,6 @@ export class Plugin extends AbstractPlugin {
         return [
             new ChatSettingTemplate(Plugin.SETTING_ITEMS_ON_WHEEL, 'Sets the amount of items on the wheel.', 7, (original) => Number(original), (value) => { if (value < 3 || value > 10) throw new Error('Values must be between 3 and 10'); }),
             new ChatSettingTemplate(Plugin.SETTING_INTERVAL_BETWEEN_SPINS, 'Sets the interval betweens spins of the wheel in minutes.', 5, (original) => Number(original), (value) => { if (value < 0 || value > 600) throw new Error('Values must be between 0 and 600'); }),
-            new ChatSettingTemplate(Plugin.SETTING_AWARD_DURATION, 'Sets the duration of the award in hours.', 24, (original) => Number(original), (value) => { if (value < 1 || value > 48) throw new Error('Values must be between 1 and 48'); }),
         ];
     }
 
@@ -62,11 +64,11 @@ export class Plugin extends AbstractPlugin {
      */
     public getPluginSpecificCommands(): BotCommand[] {
         return [
-            new BotCommand(Plugin.SPIN_CMD, "spins the Wheel of Fortune", this.spin.bind(this), true),
-            new BotCommand(Plugin.EXPLAIN_CMD, "explains the items of the Wheel of Fortune", this.explain.bind(this), true),
+            new BotCommand(Plugin.SPIN_CMD, "spins the Wheel of Fortune", this.spin.bind(this), false),
+            new BotCommand(Plugin.EXPLAIN_CMD, "explains the items of the Wheel of Fortune", this.explain.bind(this), false),
             new BotCommand(Plugin.INFO_CMD, "prints information about the Wheel of Fortune", this.info.bind(this), true),
-            new BotCommand(Plugin.STATS_CMD, "shows the statistics of the plugin", this.stats.bind(this), true),
-            new BotCommand(Plugin.CURRENT_CMD, "shows the current winnings and punishments", this.currentWinningsAndPunishments.bind(this), true),
+            new BotCommand(Plugin.STATS_CMD, "shows the statistics of the plugin", this.stats.bind(this), false),
+            new BotCommand(Plugin.CURRENT_CMD, "shows the current winnings and punishments", this.currentWinningsAndPunishments.bind(this), false),
 
             //new BotCommand(['give'], '', this._give.bind(this), false),
         ];
@@ -80,6 +82,17 @@ export class Plugin extends AbstractPlugin {
 
     public async sendTextMessage(chatId: number, message: string): Promise<void> {
         await this.telegramBotClient.sendMessage(chatId, message, { parse_mode: "HTML" });
+    }
+
+    public async sendVideoMessage(chatId: number): Promise<void> {
+        const images = [
+            'https://i.imgur.com/So5utAh.gif',
+            'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZDI1eTA2dXp0YmZ2MjBla2h4MGhndG1sM21mMnZsZ3M4cTN0em1kaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/SG0KKFtwUpqJW/giphy.gif',
+            'https://media0.giphy.com/media/UrtsPF0nbWtoRvrIJz/giphy.gif?cid=790b761116qxxfk826qnj407oqiebg148zl3va98wkc46d60&ep=v1_gifs_search&rid=giphy.gif&ct=g',
+            'https://media.tenor.com/B8QRyswCIcoAAAAM/price-is-right-oops.gif',
+        ];
+        const imageUrl = images[Math.floor(Math.random() * images.length)];
+        await this.telegramBotClient.sendVideo(chatId, imageUrl);
     }
 
     public async removeMessage(chatId: number, messageId: number): Promise<void> {
@@ -96,19 +109,30 @@ export class Plugin extends AbstractPlugin {
     }
 
     private spin(chat: Chat, user: User): string | BotCommandConfirmationQuestion {
-        return this.getChatManager(chat)!.spin(user);
+        return this.getChatManager(chat).spin(user);
     }
 
     private explain(chat: Chat): any {
-        return this.getChatManager(chat)!.explainWheel();
+        return this.getChatManager(chat).explainWheel();
     }
 
     private stats(chat: Chat): any {
         return this._statistics.getChat(chat.id)?.print();
     }
 
-    private currentWinningsAndPunishments(chat: Chat, user: User): any {
-        return this.getChatManager(chat)!.printUserAwards(user);
+    private currentWinningsAndPunishments(chat: Chat, user: User, msg: TelegramBot.Message, params: string): any {
+        if (params === 'all' || params === 'me') {
+            return this.getChatManager(chat).printUserClaimedActions(null);
+        }
+
+        const userName = params.length === 0 ? msg.reply_to_message?.from?.username : params.replace('@', '');
+        const mentionedUser = userName === null ? user : Array.from(chat.users.values()).find(x => x.name === userName)!;
+
+        if (!mentionedUser) {
+            return `Unknown user`;
+        }
+
+        return this.getChatManager(chat).printUserClaimedActions(mentionedUser);
     }
 
     private onChatReset(args: ChatResetEventArguments): any {
@@ -124,7 +148,7 @@ export class Plugin extends AbstractPlugin {
     }
 
     public onPreUserScoreChange(args: PreUserScoreChangedEventArguments): any {
-        this.getChatManager(args.chat)!.handleScoreChange(args);
+        this.getChatManager(args.chat).handleScoreChange(args);
     }
 
     private onShutdown() {
@@ -139,9 +163,14 @@ export class Plugin extends AbstractPlugin {
     }
 
     private onNightlyUpdate() {
-        for(const chat of this._chats.values()) {
+        for (const chat of Array.from(this._chats.values())) {
             chat.clearAndGenerateWheel();
         }
+    }
+
+    private onDankTime(args: PreDankTimeEventArguments) {
+        const chat = this.getChatManager(args.chat);
+        chat?.handleDankTime(args);
     }
 
     private onChatMessageReceived(args: ChatMessageEventArguments) {
@@ -149,9 +178,9 @@ export class Plugin extends AbstractPlugin {
         chat.handleChatMessage(args);
     }
 
-    private getChatManager(chat: Chat) {
+    private getChatManager(chat: Chat): ChatManager {
         if (this._chats.has(chat.id)) {
-            return this._chats.get(chat.id);
+            return this._chats.get(chat.id)!;
         } else {
             const statistics = this._statistics.getChat(chat.id);
             const chatManager = new ChatManager(chat, this, statistics);

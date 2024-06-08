@@ -29,7 +29,7 @@ export class DanktimeMultiplier extends WheelAction {
     public priceQuality: number = 1;
 
     public handleWinnings(manager: ChatManager, user: User): void {
-        manager.subscribeScoreChange(user, (args) => this.onScoreChange(manager, args));
+        manager.subscribeScoreChange(this, (args) => this.onScoreChange(manager, args));
     }
 
     public getEstimatedPrice(user: User): number {
@@ -46,7 +46,7 @@ export class DanktimeMultiplier extends WheelAction {
 
     private onScoreChange(manager: ChatManager, args: PreUserScoreChangedEventArguments) {
         // Check if the score change is from scoring a danktime
-        if (args.reason === 'normal.danktime' || args.reason === 'random.danktime') {
+        if ((args.reason === 'normal.danktime' || args.reason === 'random.danktime') && !this.isExpired && !args.immutable) {
             // Calculate the amount of points that need to be payed from the balance
             const payment = (args.changeInScore * this.multiplier) - args.changeInScore;
             

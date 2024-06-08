@@ -28,7 +28,7 @@ export class JustNothing extends WheelAction {
 export class DoubleNothing extends WheelAction {
     public name: string = 'Double Nothing';
     public description: string = 'Double nothing is still nothing. You win nothing';
-    public category: string = 'nothing2';
+    public category: string = 'nothing';
     public priceQuality: number = 0;
 
     protected handleWinnings(manager: ChatManager, user: User): void {
@@ -43,7 +43,7 @@ export class DoubleNothing extends WheelAction {
 export class TripleNothing extends WheelAction {
     public name: string = 'Triple Nothing';
     public description: string = 'Triple nothing is still nothing. You win nothing';
-    public category: string = 'nothing3';
+    public category: string = 'nothing';
     public priceQuality: number = 0;
 
     protected handleWinnings(manager: ChatManager, user: User): void {
