@@ -37,7 +37,7 @@ export class Plugin extends AbstractPlugin {
     private _util = new Util();
 
     constructor() {
-        super("Wheel of Fortune Plugin", "1.0.3")
+        super("Wheel of Fortune Plugin", "1.0.4")
 
         this.subscribeToPluginEvent(PluginEvent.ChatReset, this.onChatReset.bind(this));
         this.subscribeToPluginEvent(PluginEvent.HourlyTick, this.onHourlyTick.bind(this));
@@ -121,15 +121,15 @@ export class Plugin extends AbstractPlugin {
     }
 
     private currentWinningsAndPunishments(chat: Chat, user: User, msg: TelegramBot.Message, params: string): any {
-        if (params === 'all' || params === 'me') {
+        if (params === 'all') {
             return this.getChatManager(chat).printUserClaimedActions(null);
         }
 
         const userName = params.length === 0 ? msg.reply_to_message?.from?.username : params.replace('@', '');
         const mentionedUser = userName === null ? user : Array.from(chat.users.values()).find(x => x.name === userName)!;
 
-        if (!mentionedUser) {
-            return `Unknown user`;
+        if (!mentionedUser || params === 'me') {
+            return this.getChatManager(chat).printUserClaimedActions(user);
         }
 
         return this.getChatManager(chat).printUserClaimedActions(mentionedUser);
